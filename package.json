@@ -1,7 +1,7 @@
 {
   "author": "Arnout Kazemier <info@3rd-Eden.com> (http://3rd-Eden.com)",
   "name": "jackpot",
-  "description": "Connection pool for TCP connection",
+  "description": "Jackpot, TCP connection pooling for Node.js",
   "version": "0.0.0",
   "homepage": "https://github.com/3rd-Eden/jackpot",
   "main": "lib/jackpot.js",
