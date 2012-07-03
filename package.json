@@ -1,0 +1,22 @@
+{
+  "author": "Arnout Kazemier <info@3rd-Eden.com> (http://3rd-Eden.com)",
+  "name": "jackpot",
+  "description": "Connection pool for TCP connection",
+  "version": "0.0.0",
+  "homepage": "https://github.com/3rd-Eden/jackpot",
+  "main": "lib/jackpot.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/3rd-Eden/jackpot.git"
+  },
+  "scripts": {
+    "test": "make test"
+  },
+  "dependencies": {
+    "retry": "0.6.0"
+  },
+  "devDependencies": {
+    "mocha": "1.2.1",
+    "chai": "1.1.0"
+  }
+}
