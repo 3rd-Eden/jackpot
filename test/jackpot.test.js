@@ -203,6 +203,101 @@ describe('jackpot', function () {
     });
   });
 
+  describe('#pull', function () {
+    it('should give an error when no #factory is specified', function (done) {
+      this.timeout(50000);
+
+      var pool = new ConnectionPool();
+      pool.retries = 1;
+
+      pool.pull(function allocate(err, conn) {
+        expect(err).to.be.an.instanceof(Error);
+        expect(err.message).to.contain('#factory');
+
+        done();
+      });
+    });
+
+    it('should NOT emit an error when we can establish a connection', function (done) {
+      var pool = new ConnectionPool();
+
+      pool.factory(function factory() {
+        return net.connect(port, host);
+      });
+
+      pool.pull(function allocate(err, connection) {
+        expect(err).to.not.be.an.instanceof(Error);
+        expect(connection).to.be.an.instanceof(net.Socket);
+
+        connection.end();
+        done();
+      });
+    });
+
+    it('should an error occure, then remove it from the pool', function (done) {
+      var pool = new ConnectionPool()
+        , differentport = TESTNUMBER;
+
+      pool.once('error', function error(err) {
+        expect(pool.pool).to.have.length(0);
+
+        done();
+      });
+
+      pool.factory(function factory() {
+        return net.connect(differentport, host);
+      });
+
+      // make sure the port is different
+      expect(differentport).to.not.eql(port);
+
+      pool.pull(function allocate(err, connection) {});
+    });
+
+    it('should increase poolsize when a connection is allocated', function (done) {
+      var pool = new ConnectionPool();
+
+      pool.factory(function factory() {
+        return net.connect(port, host);
+      });
+
+      pool.pull(function allocate(err, connection) {
+        expect(connection).to.be.an.instanceof(net.Socket);
+        expect(pool.pool).to.have.length(1);
+
+        // make sure it also decreases when the connection is closed
+        connection.on('end', function end() {
+          expect(pool.pool).to.have.length(0);
+
+          done();
+        });
+        connection.end();
+      });
+    });
+
+    it('should increase metrics when allocating a connection', function (done) {
+      var pool = new ConnectionPool();
+
+      pool.factory(function factory() {
+        return net.connect(port, host);
+      });
+
+      pool.pull(function allocate(err, connection) {
+        expect(pool.metrics.allocations).to.eql(1);
+
+        // make sure it also decreases when the connection is closed
+        connection.on('end', function end() {
+          expect(pool.metrics.allocations).to.eql(1);
+          expect(pool.metrics.releases).to.eql(1);
+
+          done();
+        });
+
+        connection.end();
+      });
+    });
+  });
+
   describe('#free', function () {
     it('should kill all connections when 0 is given', function (done) {
       var pool = new ConnectionPool();
