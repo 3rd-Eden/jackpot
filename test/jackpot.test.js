@@ -88,33 +88,47 @@ describe('jackpot', function () {
     });
 
     it('should NOT emit an error when we can establish a connection', function (done) {
-      var pool = new ConnectionPool();
+      var pool = new ConnectionPool()
+        , calls = 0;
 
       pool.factory(function factory() {
         return net.connect(port, host);
       });
 
+      function next() {
+        if (++calls < 2) return;
+        expect(server.connections).to.equal(1);
+
+        pool.once('end', done);
+        pool.end();
+      }
+
+      server.once('connection', next);
+
       pool.allocate(function allocate(err, connection) {
         expect(err).to.not.be.an.instanceof(Error);
         expect(connection).to.be.an.instanceof(net.Socket);
+        expect(connection.readyState).to.equal('open');
 
-        connection.end();
-        done();
+        next();
       });
     });
 
     it('should an error occure, then remove it from the pool', function (done) {
       var pool = new ConnectionPool()
-        , differentport = TESTNUMBER;
+        , differentport = TESTNUMBER
+        , connection;
 
       pool.once('error', function error(err) {
         expect(pool.pool).to.have.length(0);
+        expect(connection.readyState).to.equal('closed');
 
         done();
       });
 
       pool.factory(function factory() {
-        return net.connect(differentport, host);
+        connection = net.connect(differentport, host);
+        return connection;
       });
 
       // make sure the port is different
@@ -137,9 +151,11 @@ describe('jackpot', function () {
         // make sure it also decreases when the connection is closed
         connection.on('end', function end() {
           expect(pool.pool).to.have.length(0);
+          expect(server.connections).to.equal(0);
 
           done();
         });
+
         connection.end();
       });
     });
@@ -153,6 +169,7 @@ describe('jackpot', function () {
 
       pool.allocate(function allocate(err, connection) {
         expect(pool.metrics.allocations).to.eql(1);
+        expect(pool.metrics.releases).to.eql(0);
 
         // make sure it also decreases when the connection is closed
         connection.on('end', function end() {
@@ -167,7 +184,8 @@ describe('jackpot', function () {
     });
 
     it('should handle burst allocations', function (done) {
-      var pool = new ConnectionPool()
+      var pool = new ConnectionPool(20)
+        , connections = []
         , count = 0
         , allocations = 50;
 
@@ -183,7 +201,11 @@ describe('jackpot', function () {
        */
 
       function allocate(err, conn) {
+        if (err) expect(err.message).to.equal('The connection pool is full');
+        if (conn) connections.push(conn);
         if (++count !== allocations) return;
+
+        expect(pool.pool).to.have.length(20);
 
         // free all the things
         pool.end(true);
@@ -199,7 +221,13 @@ describe('jackpot', function () {
         expect(saved).to.eql(0);
       });
 
-      pool.once('end', done);
+      pool.once('end', function () {
+        connections.forEach(function (conn) {
+          expect(conn.readyState).to.equal('closed');
+        });
+
+        done();
+      });
     });
   });
 
@@ -350,6 +378,43 @@ describe('jackpot', function () {
         pool.free(1);
       });
     });
+  });
+
+  describe('#release', function () {
+    it('should only destroy matching connections');
+    it('should softly kill the connection');
+    it('should forcefully kill the connection');
+    it('should increase the releases metric');
+  });
+
+  describe('#end', function () {
+    it('should clear out the connection pool', function (done) {
+      var connections = 20
+        , pool = new ConnectionPool(connections)
+        , allocated = 0;
+
+      pool.factory(function factory() {
+        return net.connect(port, host);
+      });
+
+      for (var i = 0; i < connections; i++) {
+        pool.allocate(function allocating(err, conn) {
+          if (err) return done(err);
+
+          if (++allocated < connections) return;
+
+          pool.once('close', function end() {
+            expect(server.connections).to.equal(0);
+
+            done();
+          });
+
+          pool.end();
+        });
+      }
+    });
+
+    it('should shutdown every established connection');
   });
 
   after(function after(done) {

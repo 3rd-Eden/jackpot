@@ -25,11 +25,9 @@ function Manager(limit, builder) {
   };
 
   if (builder) this.factory(builder);
-  EventEmitter.call(this);
 }
 
-Manager.prototype = new EventEmitter();
-Manager.prototype.constructor = Manager;
+Manager.prototype.__proto__ = EventEmitter.prototype;
 
 /**
  * Add a stream generator so we can generate streams for the pool.
@@ -65,7 +63,7 @@ Manager.prototype.listen = function listen(net) {
    * @api private
    */
   function regenerate(err) {
-    net.destroySoon();
+    connection.destroySoon();
 
     self.remove(net);
 
@@ -73,22 +71,21 @@ Manager.prototype.listen = function listen(net) {
     net.removeListener('error', regenerate);
     net.removeListener('end', regenerate);
 
-    if (err) self.emit('error', err);
+    if (err) return self.emit('error', err);
+    self.emit('connection:close', connection);
   }
 
-  // Listen for events that would mess up the connection.
-  net.once('timeout', regenerate)
-     .once('error', regenerate)
-     .once('end', regenerate);
-
-  return this;
+  // listen for events that would mess up the connection
+  connection.on('error', regenerate)
+            .on('close', regenerate)
+            .on('end',   regenerate);
 };
 
 /**
  * A fault tolerant connection allocation wrapper.
  *
  * @param {Function} fn
- * @api private
+ * @api public
  */
 Manager.prototype.pull = function pull(fn) {
   var operation = retry.operation({
@@ -231,16 +228,17 @@ Manager.prototype.allocate = function allocate(fn) {
 /**
  * Check if a connection is available for writing.
  *
- * @param {net.Connection} net
+ * @param {net.Connection} connection
  * @param {Boolean} ignore ignore closed or dead connections
  * @returns {Number} probability that his connection is available or will be
  * @api private
  */
-Manager.prototype.isAvailable = function isAvailable(net, ignore) {
-  var readyState = net.readyState
+
+Manager.prototype.isAvailable = function isAvailable(connection, ignore) {
+  var readyState = connection.readyState
     , writable = readyState === 'open' || readyState === 'writeOnly'
-    , writePending = net._pendingWriteReqs || 0
-    , writeQueue = net._writeQueue || []
+    , writePending = connection._pendingWriteReqs || 0
+    , writeQueue = connection._writeQueue || []
     , writes = writeQueue.length || writePending;
 
   // if the stream is writable and we don't have anything pending we are 100%
@@ -249,8 +247,8 @@ Manager.prototype.isAvailable = function isAvailable(net, ignore) {
 
   // the connection is already closed or has been destroyed, why on earth are we
   // getting it then, remove it from the pool and return 0
-  if (readyState === 'closed' || net.destroyed) {
-    this.remove(net);
+  if (readyState === 'closed' || connection.destroyed) {
+    this.remove(connection);
     return 0;
   }
 
@@ -272,7 +270,7 @@ Manager.prototype.isAvailable = function isAvailable(net, ignore) {
 /**
  * Release the connection from the connection pool.
  *
- * @param {Stream} net
+ * @param {Stream} connection
  * @param {Boolean} hard destroySoon or destroy
  * @returns {Boolean} was the removal successful
  * @api private
@@ -357,9 +355,23 @@ Manager.prototype.forEach = function forEach(callback, context) {
  * @api public
  */
 Manager.prototype.end = function end(hard) {
-  this.free(0, hard);
+  var size = this.pool.length
+    , self = this;
 
-  return this.emit('end');
+  this.free(0, true);
+
+  // Make sure that this is async
+  process.nextTick(function ticktock() {
+    self.emit('end');
+  });
+
+  // Wait until every connection has been closed
+  return this.on('connection:close', function ending() {
+    if (--size) return;
+
+    self.removeListener('connection:close', ending);
+    self.emit('close');
+  });
 };
 
 module.exports = Manager;
