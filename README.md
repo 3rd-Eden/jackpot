@@ -1,6 +1,6 @@
 # whooohoo jackpot
 
-[![build status](https://secure.travis-ci.org/3rd-Eden/jackpot.png)](http://travis-ci.org/3rd-Eden/jackpot)
+[![build status](https://secure.travis-ci.org/3rd-Eden/jackpot.png?branch=master)](http://travis-ci.org/3rd-Eden/jackpot)
 
 Jackpot is a fault tolerant connection pool for Node.js, it automatically cleans
 up after it self and detects broken connections. It does not need to be
