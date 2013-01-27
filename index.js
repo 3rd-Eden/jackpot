@@ -12,13 +12,13 @@ var EventEmitter = require('events').EventEmitter
  * @api public
  */
 function Manager(limit, builder) {
-  this.limit = +limit || 20; // defaults to 20 connections max
+  this.limit = +limit || 20; // Defaults to 20 connections max.
   this.pool = [];
   this.pending = 0;
   this.generator = null;
   this.retries = 5;
 
-  // some stats that can be used for metrics
+  // Some stats that can be used for metrics.
   this.metrics = {
       allocations: 0
     , releases: 0
@@ -47,11 +47,11 @@ Manager.prototype.factory = function factory(builder) {
 /**
  * Start listening to events that could influence the state of the connection.
  *
- * @param {net.Connection} net
+ * @param {net.Connection} connection
  * @api private
  */
-Manager.prototype.listen = function listen(net) {
-  if (!net) return this;
+Manager.prototype.listen = function listen(connection) {
+  if (!connection) return this;
 
   var self = this;
 
@@ -65,20 +65,23 @@ Manager.prototype.listen = function listen(net) {
   function regenerate(err) {
     connection.destroySoon();
 
-    self.remove(net);
+    // Connection has died, remove it from the pool.
+    self.remove(connection);
 
-    net.removeListener('timeout', regenerate);
-    net.removeListener('error', regenerate);
-    net.removeListener('end', regenerate);
+    connection.removeListener('timeout', regenerate);
+    connection.removeListener('close', regenerate);
+    connection.removeListener('error', regenerate);
+    connection.removeListener('end', regenerate);
 
     if (err) return self.emit('error', err);
     self.emit('connection:close', connection);
   }
 
-  // listen for events that would mess up the connection
-  connection.on('error', regenerate)
-            .on('close', regenerate)
-            .on('end',   regenerate);
+  // Listen for events that would mess up the connection.
+  connection.once('timeout', regenerate)
+            .once('error', regenerate)
+            .once('close', regenerate)
+            .once('end',   regenerate);
 };
 
 /**
@@ -126,7 +129,7 @@ Manager.prototype.pull = function pull(fn) {
  */
 Manager.prototype.allocate = function allocate(fn) {
   if (!this.generator) {
-    fn(new Error('Specify a stream #factory'));
+    fn(new Error('Specify a stream#factory'));
     return this;
   }
 
@@ -143,7 +146,7 @@ Manager.prototype.allocate = function allocate(fn) {
     this.removeListener('error', either);
     this.removeListener('connect', either);
 
-    // add to the pool
+    // Add to the pool.
     self.pool.push(this);
     self.pending--;
 
@@ -156,33 +159,33 @@ Manager.prototype.allocate = function allocate(fn) {
 
   i = total = this.pool.length;
 
-  // increase the allocation metric
+  // Increase the allocation metric.
   this.metrics.allocations++;
 
-  // check the current pool if we already have a few connections available, so
-  // we don't have to generate a new connection
+  // Check the current pool if we already have a few connections available, so
+  // we don't have to generate a new connection.
   while (i--) {
     connection = this.pool[i];
     probability = this.isAvailable(connection);
 
-    // we are sure this connection works
+    // We are sure this connection works.
     if (probability === 100) {
       fn(undefined, connection);
       return this;
     }
 
-    // no accurate match, add it to the queue as we can get the most likely
-    // available connection
+    // No accurate match, add it to the queue as we can get the most likely
+    // available connection.
     probabilities.push({
         probability: probability
       , connection: connection
     });
   }
 
-  // we didn't find a confident match, see if we are allowed to generate a fresh
-  // connection
+  // We didn't find a confident match, see if we are allowed to generate a fresh
+  // connection.
   if ((this.pool.length + this.pending) < this.limit) {
-    // determin if the function expects a callback or not, this can be done by
+    // Determin if the function expects a callback or not, this can be done by
     // checking the length of the given function, as the amount of args accepted
     // equals the length..
     if (this.generator.length === 0) {
@@ -207,10 +210,10 @@ Manager.prototype.allocate = function allocate(fn) {
     }
   }
 
-  // o, dear, we got issues.. we didn't find a valid connection and we cannot
-  // create more.. so we are going to check if we might have semi valid
+  // O, dear, we got issues.. We didn't find a valid connection and we cannot
+  // create more.. So we are going to check if we might have semi valid
   // connection by sorting the probabilities array and see if it has
-  // a probability above 60
+  // a probability above 60.
   probability = probabilities.sort(function sort(a, b) {
     return a.probability - b.probability;
   }).pop();
@@ -220,7 +223,7 @@ Manager.prototype.allocate = function allocate(fn) {
     return this;
   }
 
-  // well, that didn't work out, so assume failure
+  // Well, that didn't work out, so assume failure
   fn(new Error('The connection pool is full'));
   return this;
 };
@@ -233,7 +236,6 @@ Manager.prototype.allocate = function allocate(fn) {
  * @returns {Number} probability that his connection is available or will be
  * @api private
  */
-
 Manager.prototype.isAvailable = function isAvailable(connection, ignore) {
   var readyState = connection.readyState
     , writable = readyState === 'open' || readyState === 'writeOnly'
@@ -241,29 +243,29 @@ Manager.prototype.isAvailable = function isAvailable(connection, ignore) {
     , writeQueue = connection._writeQueue || []
     , writes = writeQueue.length || writePending;
 
-  // if the stream is writable and we don't have anything pending we are 100%
-  // sure that this stream is available for writing
+  // If the stream is writable and we don't have anything pending we are 100%
+  // sure that this stream is available for writing.
   if (writable && writes === 0) return 100;
 
-  // the connection is already closed or has been destroyed, why on earth are we
-  // getting it then, remove it from the pool and return 0
+  // The connection is already closed or has been destroyed, why on earth are we
+  // getting it then, remove it from the pool and return 0.
   if (readyState === 'closed' || connection.destroyed) {
     this.remove(connection);
     return 0;
   }
 
-  // if the stream isn't writable we aren't that sure..
+  // If the stream isn't writable we aren't that sure..
   if (!writable) return 0;
 
-  // the connection is still opening, so we can write to it in the future
+  // The connection is still opening, so we can write to it in the future.
   if (readyState === 'opening') return 70;
 
-  // we have some writes, so we are going to substract that amount from our 100
+  // We have some writes, so we are going to substract that amount from our 100.
   if (writes < 100) return 100 - writes;
 
-  // we didn't find any reliable states of the stream, so we are going to
+  // We didn't find any reliable states of the stream, so we are going to
   // assume something random, because we have no clue, so generate a random
-  // number between 0 - 70
+  // number between 0 - 70.
   return Math.floor(Math.random() * 70);
 };
 
@@ -275,28 +277,28 @@ Manager.prototype.isAvailable = function isAvailable(connection, ignore) {
  * @returns {Boolean} was the removal successful
  * @api private
  */
-Manager.prototype.release = function release(net, hard) {
-  var index = this.pool.indexOf(net);
+Manager.prototype.release = function release(connection, hard) {
+  var index = this.pool.indexOf(connection);
 
-  // no match
+  // No match.
   if (index === -1) return false;
 
-  // check if the stream is still open
-  if (net) {
-    if (!hard) net.end();
-    else net.destroy();
+  // Check if the stream is still open.
+  if (connection) {
+    if (!hard) connection.end();
+    else connection.destroy();
 
-    // remove it from the pool
+    // Remove it from the pool.
     this.pool.splice(index, 1);
 
-    // increase the releases metric
+    // Increase the releases metric.
     this.metrics.releases++;
   }
 
   return true;
 };
 
-// alias remove to release
+// Alias remove to release.
 Manager.prototype.remove = Manager.prototype.release;
 
 /**
@@ -307,10 +309,10 @@ Manager.prototype.remove = Manager.prototype.release;
  * @api public
  */
 Manager.prototype.free = function free(keep, hard) {
-  // default to 0 if no arguments are supplied
+  // Default to 0 if no arguments are supplied.
   keep = +keep || 0;
 
-  // create a back-up of the pool as we will be removing items from the array
+  // Create a back-up of the pool as we will be removing items from the array
   // and this could cause memory / socket leaks as we are unable to close some
   // connections in the array as the index has moved.
   var pool = this.pool.slice(0)
@@ -320,7 +322,7 @@ Manager.prototype.free = function free(keep, hard) {
     var connection = pool[i]
       , probability = this.isAvailable(connection);
 
-    // this is still a healthy connection, so try we probably just want to keep it
+    // This is still a healthy connection, so try we probably just want to keep it.
     if (keep && saved < keep && probability === 100) {
       saved++;
       continue;
@@ -329,10 +331,10 @@ Manager.prototype.free = function free(keep, hard) {
     this.release(connection, hard);
   }
 
-  // clear the back-up
+  // Clear the back-up.
   pool.length = 0;
 
-  // see how much connections are still available
+  // See how much connections are still available.
   return this.emit('free', saved, this.pool.length);
 };
 
@@ -360,12 +362,12 @@ Manager.prototype.end = function end(hard) {
 
   this.free(0, true);
 
-  // Make sure that this is async
+  // Make sure that this is async.
   process.nextTick(function ticktock() {
     self.emit('end');
   });
 
-  // Wait until every connection has been closed
+  // Wait until every connection has been closed.
   return this.on('connection:close', function ending() {
     if (--size) return;
 
