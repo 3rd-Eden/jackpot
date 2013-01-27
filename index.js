@@ -45,6 +45,7 @@ Manager.prototype.factory = function factory(builder) {
   }
 
   this.generator = builder;
+  return this;
 };
 
 /**
@@ -55,7 +56,7 @@ Manager.prototype.factory = function factory(builder) {
  */
 
 Manager.prototype.listen = function listen(net) {
-  if (!net) return;
+  if (!net) return this;
 
   var self = this;
 
@@ -80,6 +81,8 @@ Manager.prototype.listen = function listen(net) {
   // listen for events that would mess up the connection
   net.on('error', regenerate)
      .on('end', regenerate);
+
+  return this;
 };
 
 /**
@@ -116,6 +119,8 @@ Manager.prototype.pull = function pull(fn) {
   operation.attempt(function attempt() {
     self.allocate(allocate);
   });
+
+  return this;
 };
 
 /**
@@ -127,7 +132,10 @@ Manager.prototype.pull = function pull(fn) {
  */
 
 Manager.prototype.allocate = function allocate(fn) {
-  if (!this.generator) return fn(new Error('Specify a stream #factory'));
+  if (!this.generator) {
+    fn(new Error('Specify a stream #factory'));
+    return this;
+  }
 
   /**
    * Small helper function that allows us to correctly call the callback with
@@ -166,7 +174,10 @@ Manager.prototype.allocate = function allocate(fn) {
     probability = this.isAvailable(connection);
 
     // we are sure this connection works
-    if (probability === 100) return fn(undefined, connection);
+    if (probability === 100) {
+      fn(undefined, connection);
+      return this;
+    }
 
     // no accurate match, add it to the queue as we can get the most likely
     // available connection
@@ -188,7 +199,9 @@ Manager.prototype.allocate = function allocate(fn) {
       if (connection) {
         this.pending++;
         this.listen(connection);
-        return connection.on('error', either).on('connect', either);
+        connection.on('error', either).on('connect', either);
+
+        return this;
       }
     } else {
       return this.generator(function generate(err, connection) {
@@ -211,11 +224,13 @@ Manager.prototype.allocate = function allocate(fn) {
   }).pop();
 
   if (probability && probability.probability >= 60) {
-    return fn(undefined, probability.connection);
+    fn(undefined, probability.connection);
+    return this;
   }
 
   // well, that didn't work out, so assume failure
   fn(new Error('The connection pool is full'));
+  return this;
 };
 
 /**
@@ -328,7 +343,12 @@ Manager.prototype.free = function free(keep, hard) {
   pool.length = 0;
 
   // see how much connections are still available
-  this.emit('free', saved, this.pool.length);
+  return this.emit('free', saved, this.pool.length);
+};
+
+Manager.prototype.forEach = function forEach(callback, context) {
+  this.pool.forEach(callback, context);
+  return this;
 };
 
 /**

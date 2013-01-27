@@ -298,6 +298,11 @@ describe('jackpot', function () {
     });
   });
 
+  describe('#forEach', function () {
+    it('should iterate over the items in the pool');
+    it('should set the given context');
+  });
+
   describe('#free', function () {
     it('should kill all connections when 0 is given', function (done) {
       var pool = new ConnectionPool();
