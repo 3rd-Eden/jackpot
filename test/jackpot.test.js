@@ -397,20 +397,22 @@ describe('jackpot', function () {
         return net.connect(port, host);
       });
 
-      for (var i = 0; i < connections; i++) {
-        pool.allocate(function allocating(err, conn) {
-          if (err) return done(err);
+      function allocating(err, conn) {
+        if (err) return done(err);
 
-          if (++allocated < connections) return;
+        if (++allocated < connections) return;
 
-          pool.once('close', function end() {
-            expect(server.connections).to.equal(0);
+        pool.once('close', function end() {
+          expect(server.connections).to.equal(0);
 
-            done();
-          });
-
-          pool.end();
+          done();
         });
+
+        pool.end();
+      }
+
+      for (var i = 0; i < connections; i++) {
+        pool.allocate(allocating);
       }
     });
 
