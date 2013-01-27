@@ -2,7 +2,7 @@
 describe('jackpot', function () {
   'use strict';
 
-  var ConnectionPool = require('../lib/jackpot')
+  var ConnectionPool = require('../')
     , port = TESTNUMBER
     , host = 'localhost'
     , server;

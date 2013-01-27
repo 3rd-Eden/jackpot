@@ -4,7 +4,7 @@
   "description": "Jackpot, TCP connection pooling for Node.js",
   "version": "0.0.2",
   "homepage": "https://github.com/3rd-Eden/jackpot",
-  "main": "lib/jackpot.js",
+  "main": "index.js",
   "repository": {
     "type": "git",
     "url": "git://github.com/3rd-Eden/jackpot.git"
