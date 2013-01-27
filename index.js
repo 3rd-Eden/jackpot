@@ -11,7 +11,6 @@ var EventEmitter = require('events').EventEmitter
  * @param {Function} builder stream factory
  * @api public
  */
-
 function Manager(limit, builder) {
   this.limit = +limit || 20; // defaults to 20 connections max
   this.pool = [];
@@ -38,7 +37,6 @@ Manager.prototype.constructor = Manager;
  * @param {Function} builder
  * @api public
  */
-
 Manager.prototype.factory = function factory(builder) {
   if (typeof builder !== 'function') {
     throw new Error('The #factory requires a function');
@@ -54,7 +52,6 @@ Manager.prototype.factory = function factory(builder) {
  * @param {net.Connection} net
  * @api private
  */
-
 Manager.prototype.listen = function listen(net) {
   if (!net) return this;
 
@@ -67,20 +64,22 @@ Manager.prototype.listen = function listen(net) {
    * @param {Error} err optional error
    * @api private
    */
-
   function regenerate(err) {
     net.destroySoon();
 
     self.remove(net);
+
+    net.removeListener('timeout', regenerate);
     net.removeListener('error', regenerate);
     net.removeListener('end', regenerate);
 
     if (err) self.emit('error', err);
   }
 
-  // listen for events that would mess up the connection
-  net.on('error', regenerate)
-     .on('end', regenerate);
+  // Listen for events that would mess up the connection.
+  net.once('timeout', regenerate)
+     .once('error', regenerate)
+     .once('end', regenerate);
 
   return this;
 };
@@ -91,7 +90,6 @@ Manager.prototype.listen = function listen(net) {
  * @param {Function} fn
  * @api private
  */
-
 Manager.prototype.pull = function pull(fn) {
   var operation = retry.operation({
           retries: this.retries
@@ -109,7 +107,6 @@ Manager.prototype.pull = function pull(fn) {
    * @param {Socket} connection
    * @api private
    */
-
   function allocate(err, connection) {
     if (operation.retry(err)) return;
 
@@ -130,7 +127,6 @@ Manager.prototype.pull = function pull(fn) {
  * @param {Function} fn
  * @api public
  */
-
 Manager.prototype.allocate = function allocate(fn) {
   if (!this.generator) {
     fn(new Error('Specify a stream #factory'));
@@ -146,7 +142,6 @@ Manager.prototype.allocate = function allocate(fn) {
    * @param {Error} err
    * @api private
    */
-
   function either(err) {
     this.removeListener('error', either);
     this.removeListener('connect', either);
@@ -241,7 +236,6 @@ Manager.prototype.allocate = function allocate(fn) {
  * @returns {Number} probability that his connection is available or will be
  * @api private
  */
-
 Manager.prototype.isAvailable = function isAvailable(net, ignore) {
   var readyState = net.readyState
     , writable = readyState === 'open' || readyState === 'writeOnly'
@@ -283,7 +277,6 @@ Manager.prototype.isAvailable = function isAvailable(net, ignore) {
  * @returns {Boolean} was the removal successful
  * @api private
  */
-
 Manager.prototype.release = function release(net, hard) {
   var index = this.pool.indexOf(net);
 
@@ -315,7 +308,6 @@ Manager.prototype.remove = Manager.prototype.release;
  * @param {Boolean} hard destroy all connections instead of destroySoon
  * @api public
  */
-
 Manager.prototype.free = function free(keep, hard) {
   // default to 0 if no arguments are supplied
   keep = +keep || 0;
@@ -346,6 +338,13 @@ Manager.prototype.free = function free(keep, hard) {
   return this.emit('free', saved, this.pool.length);
 };
 
+/**
+ * Iterate over the different connection.
+ *
+ * @param {Function} callback
+ * @param {Mixed} context
+ * @api public
+ */
 Manager.prototype.forEach = function forEach(callback, context) {
   this.pool.forEach(callback, context);
   return this;
@@ -357,7 +356,6 @@ Manager.prototype.forEach = function forEach(callback, context) {
  * @param {Boolean} hard destroy all connections
  * @api public
  */
-
 Manager.prototype.end = function end(hard) {
   this.free(0, hard);
 
