@@ -271,7 +271,7 @@ Manager.prototype.isAvailable = function isAvailable(connection, ignore) {
  * Release the connection from the connection pool.
  *
  * @param {Stream} connection
- * @param {Boolean} hard destroySoon or destroy
+ * @param {Boolean} hard end or destroy
  * @returns {Boolean} was the removal successful
  * @api private
  */
@@ -283,7 +283,7 @@ Manager.prototype.release = function release(net, hard) {
 
   // check if the stream is still open
   if (net) {
-    if (!hard) net.destroySoon();
+    if (!hard) net.end();
     else net.destroy();
 
     // remove it from the pool
