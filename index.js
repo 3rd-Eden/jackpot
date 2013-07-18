@@ -1,6 +1,7 @@
 'use strict';
 
 var EventEmitter = require('events').EventEmitter
+  , util = require('util')
   , retry = require('retry');
 
 /**
@@ -25,11 +26,9 @@ function Manager(limit, builder) {
   };
 
   if (builder) this.factory(builder);
-  EventEmitter.call(this);
 }
 
-Manager.prototype = new EventEmitter();
-Manager.prototype.constructor = Manager;
+util.inherits(Manager, EventEmitter);
 
 /**
  * Add a stream generator so we can generate streams for the pool.
