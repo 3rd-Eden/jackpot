@@ -1,3 +1,7 @@
+#### v0.0.3
+- Changed the way how we inherit from the `EventEmitter` prototype to combat
+  potential memory leaks. See #5
+
 #### v0.0.2
 - Fixed a socket leak that was caused by incorrectly splicing an array. It
   removed the first item from the pool instead of item that was found using
