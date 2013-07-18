@@ -1,8 +1,6 @@
 'use strict';
 
-var EventEmitter = require('events').EventEmitter
-  , util = require('util')
-  , retry = require('retry');
+var retry = require('retry');
 
 /**
  * A net.Stream connection pool.
@@ -28,7 +26,7 @@ function Manager(limit, builder) {
   if (builder) this.factory(builder);
 }
 
-util.inherits(Manager, EventEmitter);
+Manager.prototype.__proto__ = require('events').EventEmitter.prototype;
 
 /**
  * Add a stream generator so we can generate streams for the pool.
@@ -297,7 +295,7 @@ Manager.prototype.release = function release(net, hard) {
   return true;
 };
 
-// alias remove to release
+// Alias remove to release.
 Manager.prototype.remove = Manager.prototype.release;
 
 /**
