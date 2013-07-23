@@ -27,14 +27,44 @@ describe('jackpot', function () {
     it('should update the limit if its supplied', function () {
       var pool = new ConnectionPool(100);
 
-      expect(pool.limit).to.eql(100);
+      expect(pool.limit).to.equal(100);
     });
 
     it('should also update the generator if its supplied', function () {
       function test() {}
       var pool = new ConnectionPool(100, test);
 
-      expect(pool.generator).to.eql(test);
+      expect(pool.generator).to.equal(test);
+    });
+
+    it('applies the options', function () {
+      function test() {}
+      var pool = new ConnectionPool(100, test, {
+        retries: 10,
+        factor: 10,
+        randomize: false
+      });
+
+      expect(pool.generator).to.equal(test);
+      expect(pool.retries).to.equal(10);
+      expect(pool.factor).to.equal(10);
+      expect(pool.randomize).to.equal(false);
+    });
+
+    it('allows options to be second argument', function () {
+      var pool = new ConnectionPool(10, {
+        retries: 10
+      });
+
+      expect(pool.retries).to.equal(10);
+    });
+
+    it('parses human readable strings', function () {
+      var pool = new ConnectionPool(10, {
+        min: '10 seconds'
+      });
+
+      expect(pool.minTimeout).to.equal(10 * 1000);
     });
   });
 
@@ -205,10 +235,23 @@ describe('jackpot', function () {
 
   describe('#pull', function () {
     it('should give an error when no #factory is specified', function (done) {
-      this.timeout(50000);
+      var pool = new ConnectionPool(10, { retries: 1 });
 
-      var pool = new ConnectionPool();
-      pool.retries = 1;
+      pool.pull(function allocate(err, conn) {
+        expect(err).to.be.an.instanceof(Error);
+        expect(err.message).to.contain('#factory');
+
+        done();
+      });
+    });
+
+    it('should honor the retry configuration', function (done) {
+      this.timeout(500);
+
+      var pool = new ConnectionPool(10, {
+        min: 10,
+        retries: 1
+      });
 
       pool.pull(function allocate(err, conn) {
         expect(err).to.be.an.instanceof(Error);
