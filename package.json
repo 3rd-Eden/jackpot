@@ -19,7 +19,8 @@
     "test": "make test"
   },
   "dependencies": {
-    "retry": "0.6.0"
+    "retry": "0.6.0",
+    "ms": "~0.6.1"
   },
   "devDependencies": {
     "mocha": "1.2.1",
