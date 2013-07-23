@@ -159,7 +159,7 @@ Manager.prototype.allocate = function allocate(fn) {
     this.removeListener('connect', either);
 
     // Add to the pool
-    self.pool.push(this);
+    if (!err) self.pool.push(this);
     self.pending--;
 
     fn(err, this);
