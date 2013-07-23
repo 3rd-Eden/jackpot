@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "mocha": "1.2.1",
-    "chai": "1.1.0"
+    "chai": "1.1.0",
+    "pre-commit": "0.0.x"
   }
 }
