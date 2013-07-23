@@ -8,10 +8,7 @@ describe('jackpot', function () {
     , server;
 
   before(function before(done) {
-    server = net.createServer(function create(socket) {
-      socket.write('<3');
-    });
-
+    server = net.createServer();
     server.listen(port, host, done);
   });
 
