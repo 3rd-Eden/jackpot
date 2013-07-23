@@ -1,7 +1,7 @@
 'use strict';
 
 var retry = require('retry')
-  , ms = require('ms');
+  , ms = require('./ms');
 
 /**
  * A net.Stream connection pool.

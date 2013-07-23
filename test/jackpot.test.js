@@ -58,10 +58,12 @@ describe('jackpot', function () {
 
     it('parses human readable strings', function () {
       var pool = new ConnectionPool(10, {
-        min: '10 seconds'
+        min: '10 seconds',
+        max: 10000
       });
 
       expect(pool.minTimeout).to.equal(10 * 1000);
+      expect(pool.maxTimeout).to.equal(10000);
     });
   });
 
