@@ -1,3 +1,6 @@
+#### v0.0.5
+- Adding missing `timeout` listener. See #9
+
 #### v0.0.4
 - Added support for configurable options.
 - Fixed a bug where broken connections were briefly added to the pool
@@ -12,7 +15,7 @@
   indexOf. See #2
 
 #### v0.0.1
-- Small fix for the isAvailable method, returns a larger availablity. See #1
+- Small fix for the isAvailable method, returns a larger availability. See #1
 
 #### v0.0.0
-- Inital release
+- Initial release

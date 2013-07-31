@@ -2,7 +2,7 @@
   "author": "Arnout Kazemier <info@3rd-Eden.com> (http://3rd-Eden.com)",
   "name": "jackpot",
   "description": "Jackpot, TCP connection pooling for Node.js",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "homepage": "https://github.com/3rd-Eden/jackpot",
   "main": "index.js",
   "keywords": [
