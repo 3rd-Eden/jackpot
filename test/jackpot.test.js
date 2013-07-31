@@ -116,6 +116,26 @@ describe('jackpot', function () {
       });
     });
 
+    it('should emit an error on timeout when trying to establish connection', function (done) {
+      var pool = new ConnectionPool(10, {
+          retries: 0
+        })
+        , unroutable = '10.255.255.255'
+        , S = new net.Socket;
+
+      pool.factory(function factory() {
+        S.connect(port, unroutable);
+        S.setTimeout(100);
+        return S;
+      });
+
+      pool.allocate(function allocate(err, connection) {
+        var fn = function() { throw err };
+        expect(fn).to.throw(/Timed out while trying to establish connection/);
+        done();
+      });
+    });
+
     it('should NOT emit an error when we can establish a connection', function (done) {
       var pool = new ConnectionPool();
 

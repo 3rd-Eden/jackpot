@@ -146,10 +146,10 @@ Manager.prototype.allocate = function allocate(fn) {
   }
 
   /**
-   * Small helper function that allows us to correctly call the callback with
+   * Two helper functions that allows us to correctly call the callback with
    * the correct arguments when we generate a new connection as the connection
    * should be emitting 'connect' befor we can use it. But it can also emit
-   * error if it fails to connect.
+   * error if it fails to connect, or times in so doing.
    *
    * @param {Error} err Optional error argument.
    * @api private
@@ -163,6 +163,12 @@ Manager.prototype.allocate = function allocate(fn) {
     self.pending--;
 
     fn(err, this);
+  }
+
+  function timeout() {
+    this.removeListener('timeout', timeout);
+    self.pending--;
+    fn(new Error('Timed out while trying to establish connection'), this);
   }
 
   var probabilities = []
@@ -206,7 +212,9 @@ Manager.prototype.allocate = function allocate(fn) {
       if (connection) {
         this.pending++;
         this.listen(connection);
-        connection.on('error', either).on('connect', either);
+        connection.on('error', either)
+          .on('connect', either)
+          .on('timeout', timeout);
 
         return this;
       }
@@ -217,7 +225,9 @@ Manager.prototype.allocate = function allocate(fn) {
 
         self.pending++;
         self.listen(connection);
-        return connection.on('error', either).on('connect', either);
+        return connection.on('error', either)
+          .on('connect', either)
+          .on('timeout', timeout);
       });
     }
   }
