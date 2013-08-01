@@ -157,6 +157,7 @@ Manager.prototype.allocate = function allocate(fn) {
   function either(err) {
     this.removeListener('error', either);
     this.removeListener('connect', either);
+    this.removeListener('timeout', timeout);
 
     // Add to the pool
     if (!err) self.pool.push(this);
