@@ -1,3 +1,7 @@
+#### v0.0.6
+- Remove the `timeout` listener, could cause double connect events / fn calls.
+  See #10
+
 #### v0.0.5
 - Adding missing `timeout` listener. See #9
 

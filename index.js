@@ -148,7 +148,7 @@ Manager.prototype.allocate = function allocate(fn) {
   /**
    * Two helper functions that allows us to correctly call the callback with
    * the correct arguments when we generate a new connection as the connection
-   * should be emitting 'connect' befor we can use it. But it can also emit
+   * should be emitting 'connect' before we can use it. But it can also emit
    * error if it fails to connect, or times in so doing.
    *
    * @param {Error} err Optional error argument.
@@ -166,6 +166,11 @@ Manager.prototype.allocate = function allocate(fn) {
     fn(err, this);
   }
 
+  /**
+   * Listen to timeout events.
+   *
+   * @api private
+   */
   function timeout() {
     this.removeListener('timeout', timeout);
     self.pending--;
@@ -204,7 +209,7 @@ Manager.prototype.allocate = function allocate(fn) {
   // we didn't find a confident match, see if we are allowed to generate a fresh
   // connection
   if ((this.pool.length + this.pending) < this.limit) {
-    // determin if the function expects a callback or not, this can be done by
+    // determine if the function expects a callback or not, this can be done by
     // checking the length of the given function, as the amount of args accepted
     // equals the length..
     if (this.generator.length === 0) {
@@ -213,9 +218,10 @@ Manager.prototype.allocate = function allocate(fn) {
       if (connection) {
         this.pending++;
         this.listen(connection);
+
         connection.on('error', either)
-          .on('connect', either)
-          .on('timeout', timeout);
+                  .on('connect', either)
+                  .on('timeout', timeout);
 
         return this;
       }
@@ -226,9 +232,10 @@ Manager.prototype.allocate = function allocate(fn) {
 
         self.pending++;
         self.listen(connection);
+
         return connection.on('error', either)
-          .on('connect', either)
-          .on('timeout', timeout);
+                         .on('connect', either)
+                         .on('timeout', timeout);
       });
     }
   }
@@ -283,7 +290,7 @@ Manager.prototype.isAvailable = function isAvailable(net, ignore) {
   // The connection is still opening, so we can write to it in the future.
   if (readyState === 'opening') return 70;
 
-  // We have some writes, so we are going to substract that amount from our 100.
+  // We have some writes, so we are going to subtract that amount from our 100.
   if (writes < 100) return 100 - writes;
 
   // We didn't find any reliable states of the stream, so we are going to
