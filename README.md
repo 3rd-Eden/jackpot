@@ -56,7 +56,7 @@ pool.factory(function () {
 
 There are 2 ways to retrieve a connection, using `allocate`:
 
-``js`
+```js
 // now that the pool is setup we can allocate a connection, the allocate
 // requires a callback as it can be async..
 pool.allocate(function (err, connection) {
